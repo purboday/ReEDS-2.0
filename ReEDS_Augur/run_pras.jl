@@ -299,39 +299,40 @@ end
 
 
 #%% Procedure
+println(abspath(PROGRAM_FILE))
+println(@__FILE__)
 if abspath(PROGRAM_FILE) == @__FILE__
     # #%% Inputs for debugging
-    # args = Dict(
-    #     "reeds_path" => "/Users/pbrown/github2/ReEDS-2.0",
-    #     "reedscase" => (
-    #         "/Users/pbrown/github2/ReEDS-2.0/runs/"
-    #         *"v20240705_tforM2_Pacific"),
-    #     "solve_year" => 2020,
-    #     "weather_year" => 2007,
-    #     "samples" => 10,
-    #     "iteration" => 0,
-    #     # "timesteps" => 8760,
-    #     "timesteps" => 61320,
-    #     "write_flow" => 1,
-    #     "write_surplus" => 1,
-    #     "write_energy" => 1,
-    #     "overwrite" => 1,
-    #     "debug" => 0,
-    #     "include_samples" => 0,
-    # )
+    args = Dict(
+        "reeds_path" => "/projects/reedsweto/pghosh/ReEDS-2.0",
+        "reedscase" => ("runs/nov0424_Mid_Case_CAISO"),
+        "solve_year" => 2026,
+        "weather_year" => 2007,
+        "samples" => 10,
+        "iteration" => 0,
+        # "timesteps" => 8760,
+        "timesteps" => 61320,
+        "write_flow" => 1,
+        "write_surplus" => 1,
+        "write_energy" => 1,
+        "overwrite" => 1,
+        "debug" => 0,
+        "include_samples" => 0,
+    )
     # reedscase = args["reedscase"]
     # solve_year = args["solve_year"]
     # timesteps = args["timesteps"]
     # weather_year = args["weather_year"]
-    # include(joinpath(args["reeds_path"], "reeds2pras", "src", "ReEDS2PRAS.jl"))
+    include(joinpath(args["reeds_path"], "reeds2pras", "src", "ReEDS2PRAS.jl"))
 
     #%% Parse the command line arguments
-    args = parse_commandline()
+    #  args = parse_commandline()
 
     #%% Include ReEDS2PRAS
-    include(joinpath(args["reedscase"], "reeds2pras", "src", "ReEDS2PRAS.jl"))
+    # include(joinpath(args["reedscase"], "reeds2pras", "src", "ReEDS2PRAS.jl"))
 
     #%% Run it
+    @info "Starting ReEDS2PRAS and PRAS ..."
     main(args)
 
     #%%

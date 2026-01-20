@@ -14,6 +14,7 @@ function get_λ(gen::Generator)
         out = fill(λ, 1, gen.timesteps)
     else
         out = reshape(λ, 1, :)
+        out = out[:, 1:gen.timesteps]
     end
     return out
 end

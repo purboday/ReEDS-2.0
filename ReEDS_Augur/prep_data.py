@@ -28,10 +28,65 @@ import numpy as np
 import gdxpds
 ### Local imports
 import ReEDS_Augur.functions as functions
+import yaml
+
+def filter_rows(df: pd.DataFrame, col: str, valid_vals: list[str]) -> pd.DataFrame:
+    """Filter rows of a dataframe based on valid values in a specified column.
+
+    Args:
+        df (pd.DataFrame): The input dataframe to filter.
+        col (str): The column name to check for valid values.
+        valid_vals (list[str]): A list of valid values for the specified column.
+
+    Returns:
+        pd.DataFrame: The filtered dataframe containing only rows with valid values.
+    """
+
+    if not valid_vals:
+        return df.copy()
+    return df[df[col].isin(valid_vals)].copy()
+
+def filter_columns(df: pd.DataFrame, valid_cols: list[str]) -> pd.DataFrame:
+    """Filter columns of a dataframe based on valid column names.
+
+    Args:
+        df (pd.DataFrame): The input dataframe to filter.
+        valid_cols (list[str]): A list of valid column names.
+
+    Returns:
+        pd.DataFrame: The filtered dataframe containing only valid columns.
+    """
+
+    if not valid_cols:
+        return df.copy()
+    return df.loc[:, df.columns.isin(valid_cols)].copy()
+
+def filter_columns_tuple(df: pd.DataFrame, filter_pos: int, valid_vals: list[str]) -> pd.DataFrame:
+    """Filter columns of a dataframe with MultiIndex columns based on valid values
+    in a specified position of the column tuples.
+
+    Args:
+        df (pd.DataFrame): The input dataframe to filter.
+        filter_pos (int): The position in the column tuples to check for valid values.
+        valid_vals (list[str]): A list of valid values for the specified position.
+
+    Returns:
+        pd.DataFrame: The filtered dataframe containing only columns with valid values
+                      in the specified position.
+    """
+
+    if not valid_vals:
+        return df.copy()
+    valid_cols = [
+        col for col in df.columns
+        if col[filter_pos] in valid_vals
+    ]
+    return df.loc[:, valid_cols].copy()
+
 
 
 #%%### Procedure
-def main(t, casedir):
+def main(t, casedir, region_name):
     #%%### DEBUGGING: Inputs
     # t = 2020
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
@@ -39,7 +94,20 @@ def main(t, casedir):
 
     #%%### Get inputs from ReEDS
     gdx_file = os.path.join(casedir,'ReEDS_Augur','augur_data',f'reeds_data_{t}.gdx')
+    
+    # load regions to include
+    with open(os.path.join("config", "panning_regions.yaml"), "r") as file:
+        region_config = yaml.safe_load(file)
+
+    valid_regions = region_config.get(region_name, [])
+    print(f"Filtering for regions in {region_name}: {valid_regions}")
     gdxreeds = gdxpds.to_dataframes(gdx_file)
+    
+    #TODO: loop over each key and filter regions as needed
+    for key,df in gdxreeds.items():
+        if 'r' in df.columns and not df.empty:
+            gdxreeds[key] = filter_rows(df, 'r', valid_regions)
+            
     ### Use indices as multiindex
     for key in gdxreeds:
         # try:
@@ -62,12 +130,20 @@ def main(t, casedir):
 
     load = pd.read_hdf(os.path.join(inputs_case, 'load.h5'))
 
+    #TODO: filter regions which are the column names
+    load = filter_columns(load, valid_regions)
+
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
 
     recf = pd.read_hdf(os.path.join(inputs_case, 'recf.h5')).astype(np.float32)
     recf.columns = recf.columns.map(
         resources.set_index('resource')[['i','r']].apply(lambda row: tuple(row), axis=1)
     ).rename(('i','r'))
+
+    #TODO: filter regions
+    resources = filter_rows(resources, 'r', valid_regions)
+    #TODO: filter recf columns which are (i,r) tuples with r in valid_regions
+    recf = filter_columns_tuple(recf, 1, valid_regions)
 
     techs = gdxreeds['i_subsets'].pivot(columns='i_subtech',index='i',values='Value')
 
